@@ -1,66 +1,59 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\SubmissionController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\Admin;
+use App\Http\Controllers\Auth\AuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DokumenController;
+use App\Http\Controllers\HomeController;
+use App\Http\Controllers\PengaduanController;
+use App\Http\Controllers\PengajuanController;
+use App\Http\Controllers\ProfilController;
 use Illuminate\Support\Facades\Route;
-use Inertia\Inertia;
 
-Route::get('/', function () {
-    return Inertia::render('Welcome', [
-        'canLogin' => Route::has('login'),
-        'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
-    ]);
+// Publik
+Route::get('/', [HomeController::class, 'index'])->name('home');
+Route::get('/lacak', [HomeController::class, 'lacak'])->name('lacak');
+
+// Autentikasi
+Route::middleware('guest')->group(function () {
+    Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+    Route::get('/register', [AuthController::class, 'showRegister'])->name('register');
+    Route::post('/register', [AuthController::class, 'register']);
 });
-
-Route::get('/dashboard', function () {
-    $user = auth()->user();
-    $stats = [
-        'total' => 0,
-        'pending' => 0,
-        'completed' => 0,
-    ];
-
-    if ($user) {
-        if ($user->role === 'masyarakat') {
-            $stats['total'] = \App\Models\Submission::where('user_id', $user->id)->count();
-            $stats['pending'] = \App\Models\Submission::where('user_id', $user->id)->where('status', 'pending')->count();
-            $stats['completed'] = \App\Models\Submission::where('user_id', $user->id)->where('status', 'completed')->count();
-        } else {
-            $stats['total'] = \App\Models\Submission::count();
-            $stats['pending'] = \App\Models\Submission::where('status', 'pending')->count();
-            $stats['completed'] = \App\Models\Submission::where('status', 'completed')->count();
-        }
-    }
-
-    return Inertia::render('Dashboard', [
-        'stats' => $stats
-    ]);
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::post('/logout', [AuthController::class, 'logout'])->name('logout');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
-    Route::resource('submissions', SubmissionController::class);
+    Route::get('/profil', [ProfilController::class, 'edit'])->name('profil.edit');
+    Route::put('/profil', [ProfilController::class, 'update'])->name('profil.update');
 
-    // User Complaints
-    Route::get('/complaints', [\App\Http\Controllers\ComplaintController::class, 'index'])->name('complaints.index');
-    Route::post('/complaints', [\App\Http\Controllers\ComplaintController::class, 'store'])->name('complaints.store');
+    // Unduh berkas (dicek hak aksesnya di controller)
+    Route::get('/dokumen/{dokumen}', [DokumenController::class, 'pengajuan'])->name('dokumen.show');
+    Route::get('/pengaduan/{pengaduan}/lampiran', [DokumenController::class, 'pengaduan'])->name('pengaduan.lampiran');
 
-    // Admin Routes
-    Route::prefix('admin')->name('admin.')->group(function () {
-        Route::get('/submissions', [\App\Http\Controllers\Admin\SubmissionController::class, 'index'])->name('submissions.index');
-        Route::get('/submissions/{submission}', [\App\Http\Controllers\Admin\SubmissionController::class, 'show'])->name('submissions.show');
-        Route::put('/submissions/{submission}/status', [\App\Http\Controllers\Admin\SubmissionController::class, 'updateStatus'])->name('submissions.status.update');
+    // Masyarakat
+    Route::middleware('role:masyarakat')->group(function () {
+        Route::resource('pengajuan', PengajuanController::class)->only(['index', 'create', 'store', 'show']);
+        Route::post('/pengajuan/{pengajuan}/dokumen', [PengajuanController::class, 'unggahDokumen'])->name('pengajuan.dokumen');
+        Route::resource('pengaduan', PengaduanController::class)->only(['index', 'create', 'store', 'show']);
+    });
 
-        // Admin Complaints
-        Route::get('/complaints', [\App\Http\Controllers\Admin\ComplaintController::class, 'index'])->name('complaints.index');
-        Route::put('/complaints/{complaint}', [\App\Http\Controllers\Admin\ComplaintController::class, 'update'])->name('complaints.update');
+    // Petugas & Admin
+    Route::middleware('role:admin,petugas')->prefix('admin')->name('admin.')->group(function () {
+        Route::get('/pengajuan', [Admin\PengajuanController::class, 'index'])->name('pengajuan.index');
+        Route::get('/pengajuan/{pengajuan}', [Admin\PengajuanController::class, 'show'])->name('pengajuan.show');
+        Route::patch('/pengajuan/{pengajuan}/status', [Admin\PengajuanController::class, 'updateStatus'])->name('pengajuan.status');
+
+        Route::get('/pengaduan', [Admin\PengaduanController::class, 'index'])->name('pengaduan.index');
+        Route::get('/pengaduan/{pengaduan}', [Admin\PengaduanController::class, 'show'])->name('pengaduan.show');
+        Route::patch('/pengaduan/{pengaduan}', [Admin\PengaduanController::class, 'tanggapi'])->name('pengaduan.tanggapi');
+
+        Route::middleware('role:admin')->group(function () {
+            Route::get('/users', [Admin\UserController::class, 'index'])->name('users.index');
+            Route::post('/users', [Admin\UserController::class, 'store'])->name('users.store');
+            Route::delete('/users/{user}', [Admin\UserController::class, 'destroy'])->name('users.destroy');
+        });
     });
 });
-
-require __DIR__.'/auth.php';

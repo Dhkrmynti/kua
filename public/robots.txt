@@ -1,2 +1,16 @@
+# Situs demo: izinkan bot pratinjau tautan (WhatsApp, Facebook, X, Telegram, LinkedIn, Discord, Slack),
+# tetapi jangan diindeks mesin pencari.
+# Untuk produksi, cukup sisakan "User-agent: *" dengan "Disallow:" kosong.
+
+User-agent: facebookexternalhit
+User-agent: Facebot
+User-agent: WhatsApp
+User-agent: Twitterbot
+User-agent: TelegramBot
+User-agent: LinkedInBot
+User-agent: Discordbot
+User-agent: Slackbot
+Allow: /
+
 User-agent: *
-Disallow:
+Disallow: /

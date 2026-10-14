@@ -1,21 +1,6 @@
 <script setup>
-import Checkbox from '@/Components/Checkbox.vue';
-import GuestLayout from '@/Layouts/GuestLayout.vue';
-import InputError from '@/Components/InputError.vue';
-import InputLabel from '@/Components/InputLabel.vue';
-import PrimaryButton from '@/Components/PrimaryButton.vue';
-import TextInput from '@/Components/TextInput.vue';
 import { Head, Link, useForm } from '@inertiajs/vue3';
-import { ref } from 'vue';
-
-defineProps({
-    canResetPassword: {
-        type: Boolean,
-    },
-    status: {
-        type: String,
-    },
-});
+import PublicLayout from '@/Layouts/PublicLayout.vue';
 
 const form = useForm({
     email: '',
@@ -23,117 +8,43 @@ const form = useForm({
     remember: false,
 });
 
-const showPassword = ref(false);
-
-const submit = () => {
-    form.post(route('login'), {
-        onFinish: () => form.reset('password'),
-    });
-};
+function submit() {
+    form.post('/login', { onFinish: () => form.reset('password') });
+}
 </script>
 
 <template>
-    <GuestLayout>
-        <Head title="Log in" />
+    <Head title="Masuk" />
 
-        <div v-if="status" class="mb-4 text-sm font-medium text-green-600">
-            {{ status }}
-        </div>
+    <PublicLayout>
+        <section class="mx-auto max-w-md px-4 py-16">
+            <div class="card p-8">
+                <h1 class="text-2xl font-extrabold text-stone-900">Masuk</h1>
+                <p class="mt-1 text-sm text-stone-500">Masuk untuk mengelola pengajuan dan pengaduan Anda.</p>
 
-        <form @submit.prevent="submit">
-            <div>
-                <InputLabel for="email" value="Email" />
+                <form class="mt-6 space-y-4" @submit.prevent="submit">
+                    <div>
+                        <label for="email" class="label">Email</label>
+                        <input id="email" v-model="form.email" type="email" class="input" :class="{ 'input-error': form.errors.email }" autocomplete="username" required autofocus />
+                        <p v-if="form.errors.email" class="error-text">{{ form.errors.email }}</p>
+                    </div>
+                    <div>
+                        <label for="password" class="label">Kata sandi</label>
+                        <input id="password" v-model="form.password" type="password" class="input" autocomplete="current-password" required />
+                        <p v-if="form.errors.password" class="error-text">{{ form.errors.password }}</p>
+                    </div>
+                    <label class="flex items-center gap-2 text-sm text-stone-600">
+                        <input v-model="form.remember" type="checkbox" class="size-4 rounded border-stone-300 accent-brand-600" />
+                        Ingat saya
+                    </label>
+                    <button type="submit" class="btn-primary w-full" :disabled="form.processing">Masuk</button>
+                </form>
 
-                <TextInput
-                    id="email"
-                    type="email"
-                    class="mt-1 block w-full"
-                    v-model="form.email"
-                    required
-                    autofocus
-                    autocomplete="username"
-                />
-
-                <InputError class="mt-2" :message="form.errors.email" />
+                <p class="mt-6 text-center text-sm text-stone-500">
+                    Belum punya akun?
+                    <Link href="/register" class="font-semibold text-brand-700 hover:underline">Daftar sekarang</Link>
+                </p>
             </div>
-
-            <div class="mt-4">
-                <InputLabel for="password" value="Password" />
-
-                <div class="relative">
-                    <TextInput
-                        id="password"
-                        :type="showPassword ? 'text' : 'password'"
-                        class="mt-1 block w-full pr-10"
-                        v-model="form.password"
-                        required
-                        autocomplete="current-password"
-                    />
-                    <button
-                        type="button"
-                        @click="showPassword = !showPassword"
-                        class="absolute inset-y-0 right-0 px-3 flex items-center text-gray-500 hover:text-gray-700 focus:outline-none"
-                    >
-                        <svg v-if="!showPassword" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                        </svg>
-                        <svg v-else class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                        </svg>
-                    </button>
-                </div>
-
-                <InputError class="mt-2" :message="form.errors.password" />
-            </div>
-
-            <div class="mt-4 block">
-                <label class="flex items-center">
-                    <Checkbox name="remember" v-model:checked="form.remember" />
-                    <span class="ms-2 text-sm text-gray-600"
-                        >Remember me</span
-                    >
-                </label>
-            </div>
-
-            <div class="mt-4 flex items-center justify-end">
-                <Link
-                    v-if="canResetPassword"
-                    :href="route('password.request')"
-                    class="rounded-md text-sm text-gray-600 underline hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                    Forgot your password?
-                </Link>
-
-                <PrimaryButton
-                    class="ms-4"
-                    :class="{ 'opacity-25': form.processing }"
-                    :disabled="form.processing"
-                >
-                    Log in
-                </PrimaryButton>
-            </div>
-            
-            <!-- Demo Accounts Section -->
-            <div class="mt-8 pt-6 border-t border-gray-100">
-                <p class="text-sm text-center text-gray-500 mb-4">Atau gunakan akun demo berikut:</p>
-                <div class="grid grid-cols-2 gap-3">
-                    <button
-                        type="button"
-                        @click="() => { form.email = 'warga@kua.com'; form.password = 'password'; form.post(route('login')) }"
-                        class="px-4 py-2 bg-blue-50 text-blue-700 hover:bg-blue-100 rounded-lg text-sm font-semibold transition"
-                    >
-                        Demo Warga
-                    </button>
-                    <button
-                        type="button"
-                        @click="() => { form.email = 'admin@kua.com'; form.password = 'password'; form.post(route('login')) }"
-                        class="px-4 py-2 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 rounded-lg text-sm font-semibold transition"
-                    >
-                        Demo Admin
-                    </button>
-                </div>
-            </div>
-        </form>
-    </GuestLayout>
+        </section>
+    </PublicLayout>
 </template>
